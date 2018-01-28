@@ -47,6 +47,7 @@ public class Server {
             replyBytes[1] = 3;
             replyBytes[2] = 0;
             replyBytes[3] = 1;
+            //Send Data Block Here
           } else if(b1[0] ==0 && b1[1]==2){
         	//Valid Write Request
             //send 0 4 0 0
@@ -55,7 +56,7 @@ public class Server {
             replyBytes[1] = 4;
             replyBytes[2] = 0;
             replyBytes[3] = 0;
-            
+            //Send ACK Block Here
           }
         } else {
           Exception e = new Exception("Invalid request");
