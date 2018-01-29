@@ -10,7 +10,9 @@ public class Block {
 	
 	    // block number
 	    private byte blockNoPart;
-
+	    byte getBlockNum() {
+	    	return blockNoPart;
+	    }
 	    /**
 	     * Create part of a block number
 	     */
@@ -44,6 +46,7 @@ public class Block {
 	        // of course we want to have two bytes...
 	        int b1 = value / 256;
 	        int b2 = value % 256;
+	        //CHanged b1 and b2 is this correct? 
 	        System.out.println("Split into 2 parts (ints): " + b1 + " " + b2);
 	    }
 	}

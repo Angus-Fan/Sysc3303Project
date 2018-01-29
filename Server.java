@@ -7,14 +7,15 @@ import java.util.*;
 
 public class Server {
   DatagramSocket socket;
-  
+  Block ackBlock = new Block();
+  Block dataBlock = new Block();
   Server(){
-	  Block ackBlock = new Block();
+	 
 	  //respond with ACK block 0
 	  ackBlock.setBlockNoPart(0);
 	 
 	  //respond with DATA block 1 and 0 bytes of data
-	  Block dataBlock = new Block();
+	 
 	  dataBlock.setBlockNoPart(1);
 	  
   }
@@ -35,20 +36,32 @@ public class Server {
         boolean valid = check(packet.getData());//parse the data to see if it's valid
         print(info);//prints information it has received
         
-        byte[] replyBytes = new byte[4];
+        //byte[] replyBytes = new byte[4];
+        byte[] replyBytes = new byte[1];
         DatagramPacket reply ;
         
         if(valid){
           byte[] b1 = packet.getData();
           if(b1[0] == 0 && b1[1]==1){
+        	//Block# 2 + DataBlock 512 bytes of data no I/O so only 2 bytes for block#?
+        	
+        	replyBytes[0]=dataBlock.getBlockNum();
+        
         	//Valid Read Request
             //send 0 3 0 1
+        	/*
             replyBytes[0] = 0;
             replyBytes[1] = 3;
             replyBytes[2] = 0;
             replyBytes[3] = 1;
+            */
+        	
             //Send Data Block Here
           } else if(b1[0] ==0 && b1[1]==2){
+        	 //Block# 2
+        	
+        	replyBytes[0]=ackBlock.getBlockNum();
+        	
         	//Valid Write Request
             //send 0 4 0 0
         	  
@@ -57,6 +70,7 @@ public class Server {
             replyBytes[2] = 0;
             replyBytes[3] = 0;
             //Send ACK Block Here
+            
           }
         } else {
           Exception e = new Exception("Invalid request");
