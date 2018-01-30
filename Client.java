@@ -12,8 +12,10 @@ import java.net.InetAddress;
 public class Client{
   DatagramSocket socket;//both send and receive
   int s = 1;
+  Scanner scanner;
   
   Client(){
+	  scanner = new Scanner(System.in);
     try{
       socket = new DatagramSocket();
     } catch (Exception e){
@@ -34,7 +36,10 @@ public class Client{
       foo[1] = 1;
       
       //filename gets converted to bytes
-      String filename = "read.txt";
+      System.out.println("Please enter the filename");
+      
+      String filename = scanner.nextLine();
+      //String filename = "read.txt";
       byte [] b = filename.getBytes();
       int j = 2;
       
@@ -87,7 +92,9 @@ public class Client{
       foo[1] = 2;
       
       //filename gets converted to bytes
-      String filename = "file.txt";
+      System.out.println("Please enter the filename");
+      
+      String filename = scanner.nextLine();
       byte [] b = filename.getBytes();
       int j = 2;
       
@@ -209,25 +216,34 @@ public class Client{
   void run(){
     
     try{
+     
+      
       //read();
-      for(int i =0;i<11;i++){
+     
         //read request
-        System.out.println("i; "+i);
-        if(i==10){
-          //invalid request
-          invalidRequest();
-        } else {
-          if(s == 1){
-            //Alternates between a read request and a write request
-            read();
-            s =2;
-            
-          } else if (s ==2) {
-            write();
-            s=1;
-          }
+        System.out.println("What would you like to do: continue or shutdown");
+        String answer = scanner.nextLine();
+        if(answer.toLowerCase().equals("shutdown")){
+        	//shutdown function
+        	System.out.println("User typed shutdown");
+          
+        } else if (answer.toLowerCase().equals("continue")) {
+        	System.out.println("What would you like to do: (read) or (write)");
+        	answer = scanner.nextLine();
+        	if(answer.toLowerCase().equals("read")){
+        		read();
+        	}
+        	else if(answer.toLowerCase().equals("write")) {
+        		
+        		write();
+        	} else {
+        		System.out.println("Invalid request");
+        	}
+        			
+        	
+        	
         }
-      }
+      
       System.out.println("Sockets closing, good bye");
       socket.close();
       
