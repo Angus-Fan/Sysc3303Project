@@ -7,16 +7,10 @@ import java.util.*;
 
 public class Server {
   DatagramSocket socket;
-  Block ackBlock = new Block();
-  Block dataBlock = new Block();
+  
   Server(){
 	 
-	  //respond with ACK block 0
-	  ackBlock.setBlockNoPart(0);
-	 
-	  //respond with DATA block 1 and 0 bytes of data
-	 
-	  dataBlock.setBlockNoPart(1);
+	  
 	  
   }
   void run(){
@@ -45,7 +39,7 @@ public class Server {
           if(b1[0] == 0 && b1[1]==1){
         	//Block# 2 + DataBlock 512 bytes of data no I/O so only 2 bytes for block#?
         	
-        	replyBytes[0]=dataBlock.getBlockNum();
+        	
         
         	//Valid Read Request
             //send 0 3 0 1
@@ -60,7 +54,7 @@ public class Server {
           } else if(b1[0] ==0 && b1[1]==2){
         	 //Block# 2
         	
-        	replyBytes[0]=ackBlock.getBlockNum();
+        	
         	
         	//Valid Write Request
             //send 0 4 0 0
