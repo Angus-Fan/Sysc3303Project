@@ -1,31 +1,26 @@
 //Patrick Aduwo
 //100962777
 
-//import java.net.*;
-//import java.net.InetAddress;
+import java.net.*;
 import java.util.*;
-import java.lang.*;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
 
-public class Client{
+public class Client extends Thread{
   DatagramSocket socket;//both send and receive
   int s = 1;
   Scanner scanner;
   
   Client(){
-	  scanner = new Scanner(System.in);
     try{
       socket = new DatagramSocket();
+      scanner = new Scanner(System.in);
     } catch (Exception e){
       System.out.println("Error in constructor");
       e.printStackTrace();
-      System.exit(1);
+      //System.exit(1);
     }
   }
   
-  void read(){
+  void read(String filename){
     try{
       System.out.println("\n==================================================");
       System.out.println("Client: Sending a read request");
@@ -36,24 +31,11 @@ public class Client{
       foo[1] = 1;
       
       //filename gets converted to bytes
-      System.out.println("Please enter the filename");
-      
-      String filename = scanner.nextLine();
-      //String filename = "read.txt";
       byte [] b = filename.getBytes();
       int j = 2;
       
       for(int i = 0;i<filename.length();i++){
         foo[j]=b[i];
-        j++;
-      }
-      foo[j] =0;
-      j++;//next element
-      
-      String mode = "neTAscii";//or "octet"
-      byte [] b1 = mode.getBytes();
-      for(int i =0; i<mode.length();i++){
-        foo[j] = b1[i];
         j++;
       }
       foo[j] =0;
@@ -65,23 +47,26 @@ public class Client{
       InetAddress address = InetAddress.getByName("127.0.0.1");
       DatagramPacket readRequest = new DatagramPacket(foo,20,address,23);
       
+      Thread.sleep(3000);
+      
       socket.send(readRequest);
       //wait to receive
       
       byte[] b2 = new byte[20];
-      DatagramPacket r = new DatagramPacket(b2, 20);
+      DatagramPacket response = new DatagramPacket(b2, 20);
       
       System.out.println("Client: waiting... ");
-      socket.receive(r);
+      socket.receive(response);
       System.out.println("Client: packet received");
-      print(r.getData());
+      print(response.getData());
       
     } catch (Exception e){
       System.out.println("Error in read");
-      System.out.println(e);
+      //System.out.println(e);
+      //System.exit(1);
     }
   }
-  void write(){
+  void write(String filename){
     try{
       System.out.println("\n======================================");
       System.out.println("Client: Sending a write request");
@@ -92,23 +77,12 @@ public class Client{
       foo[1] = 2;
       
       //filename gets converted to bytes
-      System.out.println("Please enter the filename");
-      
-      String filename = scanner.nextLine();
+      //String filename = "file.txt";
       byte [] b = filename.getBytes();
       int j = 2;
       
       for(int i = 0;i<filename.length();i++){
         foo[j]=b[i];
-        j++;
-      }
-      foo[j] =0;
-      j++;
-      
-      String mode = "neTAscii";//other mode is octet
-      byte [] b1 = mode.getBytes();
-      for(int i =0; i<mode.length();i++){
-        foo[j] = b1[i];
         j++;
       }
       foo[j] =0;
@@ -122,20 +96,21 @@ public class Client{
       
       //send the request
       System.out.println("Client: sending a write request");
+      Thread.sleep(3000);
       socket.send(write);
       
       //wait to receive
       byte[] b2 = new byte[20];
-      DatagramPacket r = new DatagramPacket(b2, 20);
+      DatagramPacket writeResponse = new DatagramPacket(b2, 20);
       
       System.out.println("Client: waiting for a response from the Intermediate host...");
-      socket.receive(r);
-      print(r.getData());
+      socket.receive(writeResponse);
+      print(writeResponse.getData());
       
       
     } catch (Exception e){
       System.out.println("Error in write");
-      System.out.println(e);
+      //System.out.println(e);
     }
   }
   void invalidRequest(){
@@ -156,38 +131,32 @@ public class Client{
         j++;
       }
       foo[j] =0;
-      j++;
-      
-      String mode = "neTAscii";//other mode is octet
-      byte [] b1 = mode.getBytes();
-      for(int i =0; i<mode.length();i++){
-        foo[j] = b1[i];
-        j++;
-      }
-      foo[j] =0;
       
       //print information
       String str = new String(foo);
       print(str);
       InetAddress address;
       address = InetAddress.getByName("127.0.0.1");
-      DatagramPacket write = new DatagramPacket(foo,20,address,23);
+      DatagramPacket invalid = new DatagramPacket(foo,20,address,23);
       
       //send the request
       System.out.println("Client: sending an invalid request");
-      socket.send(write);
+      Thread.sleep(3000);
+      socket.send(invalid);
       
       System.out.println("Client: waiting for a response from the Intermediate host...");
       //wait to receive
-      byte[] b2 = new byte[20];
-      DatagramPacket response = new DatagramPacket(b2, 20);
+      byte[] b2 = new byte[11];
+      DatagramPacket invalidResponse = new DatagramPacket(b2, 20);
       
       socket.setSoTimeout(3000);
-      socket.receive(response);
-      print(response.getData());
+      socket.receive(invalidResponse);
+      print(invalidResponse.getData());
       
     } catch (Exception e){
-      System.out.println("Error in invalidRequest ");
+      
+      System.out.println("Error in (InvalidRequest)");
+      
     }
     
   }
@@ -213,36 +182,30 @@ public class Client{
     
   }
   
-  void run(){
-    
+  public void run(){
     try{
-     
-      
-      //read();
-     
-        //read request
-        System.out.println("What would you like to do: continue or shutdown");
-        String answer = scanner.nextLine();
-        if(answer.toLowerCase().equals("shutdown")){
-        	//shutdown function
-        	System.out.println("User typed shutdown");
+      while(true){
+        System.out.println("Hi, what type of request would you like to send: (read), (write) or (shutdown)");
+        //String answer = scanner.nextLine().toLowerCase();
+        String answer = "read";
+        if(answer.equals("read")){
+          System.out.println("What is the name of the file");
+          //answer = scanner.nextLine().toLowerCase();
+          answer = "file.txt";
+          read(answer);
+        } else if(answer.equals("write")){
+          System.out.println("What is the name of the file");
+          answer = scanner.nextLine().toLowerCase();
+          write(answer);
           
-        } else if (answer.toLowerCase().equals("continue")) {
-        	System.out.println("What would you like to do: (read) or (write)");
-        	answer = scanner.nextLine();
-        	if(answer.toLowerCase().equals("read")){
-        		read();
-        	}
-        	else if(answer.toLowerCase().equals("write")) {
-        		
-        		write();
-        	} else {
-        		System.out.println("Invalid request");
-        	}
-        			
-        	
-        	
+        } else if (answer.equals("shutdown")){
+          System.out.println("Shuting down...");
+          break;
+          
+        } else {
+          System.out.println("Invalid request");
         }
+      }
       
       System.out.println("Sockets closing, good bye");
       socket.close();
@@ -250,12 +213,11 @@ public class Client{
     } catch (Exception e){
       System.out.println("Error in run");
       e.printStackTrace();
-      System.exit(1);
+      //System.exit(1);
     }
   }
-  
   public static void main(String[] args){
-    Client client = new Client();
-    client.run();
+    Client c = new Client();
+    c.run();
   }
 }
