@@ -77,20 +77,26 @@ public class Server extends Thread{
       boolean valid = check(packet.getData());
       byte[] b1 = packet.getData();
       
-      byte[] replyBytes = new byte[2];
+      byte[] replyBytes = new byte[4];
       DatagramPacket reply ;
       try{
         //1 0 for RRQ
         //0 0 for WRQ
         if(valid){
           if((b1[0] == 0) && (b1[1]==1)){
-            //send 1 0
-            replyBytes[0] = 1;
-            replyBytes[1] = 0;
+            //send 0 3 0 1
+	    //03 is the op code for data
+	
+            replyBytes[0] = 0;
+            replyBytes[1] = 3;
+	        replyBytes[2] = 0;
+	        replyBytes[3] = 1;
           } else if((b1[0] == 0) && (b1[1] ==2)){
             //send 0 4 0 0
             replyBytes[0] = 0;
-            replyBytes[1] = 0;
+            replyBytes[1] = 4;
+	        replyBytes[2] = 0;
+	        replyBytes[3] = 0;
           }
         } else {
           Exception e = new Exception("Invalid Request");
