@@ -1,25 +1,38 @@
-//Patrick Aduwo
-//100962777
+//Group 8
+/*
+ * This is the client code, the code sends "read" and "write" request to the server.
+ * */
 
 import java.net.*;
 import java.util.*;
+import java.io.*;
 
 public class Client extends Thread{
   DatagramSocket socket;//both send and receive
-  int s = 1;
+  FileInputStream fi;
+  FileInputStream fii=null;
+  byte fileIndex =1;
   Scanner scanner;
+  boolean loop = true;
+  List b;
+  
+  String path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/iteration2/Code/";
   
   Client(){
     try{
       socket = new DatagramSocket();
       scanner = new Scanner(System.in);
+      b = new ArrayList();
+      
     } catch (Exception e){
       System.out.println("Error in constructor");
-      e.printStackTrace();
+      //e.printStackTrace();
       //System.exit(1);
     }
   }
-  
+  /*
+   * Function sends a read request to the ErrorSimulator
+   * */
   void read(String filename){
     try{
       System.out.println("\n==================================================");
@@ -46,39 +59,76 @@ public class Client extends Thread{
       
       InetAddress address = InetAddress.getByName("127.0.0.1");
       DatagramPacket readRequest = new DatagramPacket(foo,20,address,23);
-      
       Thread.sleep(3000);
       
+      //send read request
       socket.send(readRequest);
-      //wait to receive
       
-      byte[] b2 = new byte[20];
-      DatagramPacket response = new DatagramPacket(b2, 20);
       
-      System.out.println("Client: waiting... ");
-      socket.receive(response);
-      System.out.println("Client: packet received");
-      print(response.getData());
-      
+      //keep accepting stuffs from the server until the size of the message is not up to 512
+      while(true){
+        byte[] b2 = new byte[516];
+        DatagramPacket response = new DatagramPacket(b2, 516);
+        
+        //data received from Server
+        System.out.println("Client: waiting for Data packet");
+        socket.receive(response);
+        System.out.println("Client: Data packet received");
+        print(response.getData());
+        
+        byte[] b3 = response.getData();
+        
+        if(verifySize(response.getData()) == false){
+          System.out.println("That is all");
+          break;
+          
+        } else {
+          byte[] responseByte = response.getData();
+          //b.add(responseByte);
+          
+          //send acknowledgement
+          byte[] foo2 = new byte[516];
+          foo2[0]=0;
+          foo2[1]=4;
+          foo2[2]= b3[2];
+          foo2[3]= b3[3];
+          
+          System.out.println("Client: Sending acknowledgement");
+          DatagramPacket ack = new DatagramPacket(foo2, 516,address,23);
+          Thread.sleep(3000);
+          socket.send(ack);
+        }
+        
+      }
     } catch (Exception e){
       System.out.println("Error in read");
-      //System.out.println(e);
-      //System.exit(1);
     }
   }
+  boolean verifySize(byte[] received){
+    int i=4;
+    while(i<516){
+      if(received[i]==0) return false;
+      i++;
+    }
+    return true;
+  }
+  /*
+   * Function sends a write request to the ErrorSiumulator
+   * */
   void write(String filename){
     try{
-      System.out.println("\n======================================");
+      byte[] foo = new byte[516];
+      InetAddress address;
+      DatagramPacket writeRequest;
+      System.out.println("\n==================================================");
       System.out.println("Client: Sending a write request");
-      byte[] foo = new byte[20];
       
       //first two strings are 0 and 2
       foo[0] = 0;
       foo[1] = 2;
       
-      //filename gets converted to bytes
-      //String filename = "file.txt";
-      byte [] b = filename.getBytes();
+      //get the filename
+      byte[] b = filename.getBytes();;
       int j = 2;
       
       for(int i = 0;i<filename.length();i++){
@@ -86,81 +136,86 @@ public class Client extends Thread{
         j++;
       }
       foo[j] =0;
-      
-      //print information
+      //print out the message
       String str = new String(foo);
       print(str);
       
-      InetAddress address = InetAddress.getByName("127.0.0.1");
-      DatagramPacket write = new DatagramPacket(foo,20,address,23);
-      
-      //send the request
-      System.out.println("Client: sending a write request");
-      Thread.sleep(3000);
-      socket.send(write);
-      
-      //wait to receive
-      byte[] b2 = new byte[20];
-      DatagramPacket writeResponse = new DatagramPacket(b2, 20);
-      
-      System.out.println("Client: waiting for a response from the Intermediate host...");
-      socket.receive(writeResponse);
-      print(writeResponse.getData());
-      
-      
-    } catch (Exception e){
-      System.out.println("Error in write");
-      //System.out.println(e);
-    }
-  }
-  void invalidRequest(){
-    try{
-      System.out.println("\n=================================================");
-      System.out.println("Client: Sending an invalid request");
-      byte[] foo = new byte[20];
-      foo[0]=44;
-      foo[1]=90;
-      
-      //filename gets converted to bytes
-      String filename = "file.txt";
-      byte [] b = filename.getBytes();
-      int j = 2;
-      
-      for(int i = 0;i<filename.length();i++){
-        foo[j]=b[i];
-        j++;
-      }
-      foo[j] =0;
-      
-      //print information
-      String str = new String(foo);
-      print(str);
-      InetAddress address;
       address = InetAddress.getByName("127.0.0.1");
-      DatagramPacket invalid = new DatagramPacket(foo,20,address,23);
+      writeRequest = new DatagramPacket(foo,516,address,23);
       
-      //send the request
-      System.out.println("Client: sending an invalid request");
       Thread.sleep(3000);
-      socket.send(invalid);
+      //send the request to the errorSimulator
+      socket.send(readRequest);
+      //get the response from the server
       
-      System.out.println("Client: waiting for a response from the Intermediate host...");
-      //wait to receive
-      byte[] b2 = new byte[11];
-      DatagramPacket invalidResponse = new DatagramPacket(b2, 20);
-      
-      socket.setSoTimeout(3000);
-      socket.receive(invalidResponse);
-      print(invalidResponse.getData());
-      
+      while(loop){
+        byte[] b1 = new byte[516];
+        DatagramPacket response = new DatagramPacket(b1, 516);
+        
+        System.out.println("Client: waiting... ");
+        socket.receive(response);
+        System.out.println("Client: response received");
+        //print the message received
+        print(response.getData());
+        
+        byte[] answer = checkACKandGetBlock(response.getData());
+        if(answer[0]==-1){
+          System.out.println("System didn't acknowledge");
+          return;
+        } else {
+          
+          if(fii!=null) fii = new FileInputStream(path+filename);
+          //Server has sent back an acknowledgement, send the rest of the file
+          
+          byte[] b2 = new byte[512];
+          byte[] b3 = new byte[516];
+          b3[0]=0;
+          b3[1]=3;
+          b3[2]=answer[0];
+          b3[3]=answer[1];
+          
+          fii.read(b2);//read more of the file and send it
+          //check the size
+          if(checkSize(b2)==false){
+            loop=false;
+          }
+          for(int i =0;i<512;i++){
+            b3[i+4]=b2[i];
+          }
+          
+          address = InetAddress.getByName("127.0.0.1");
+          DatagramPacket p =  new DatagramPacket(b2,516,address,23);
+          //send the file to the server
+          Thread.sleep(3000);
+          socket.send(p);
+        }
+      }
     } catch (Exception e){
-      
-      System.out.println("Error in (InvalidRequest)");
-      
+      System.out.println("Error in read function");
     }
     
   }
-  
+  boolean checkSize(byte[] b){
+    for(int i =0;i<512;i++){
+      if(b[i]==0) return false;
+    }
+    return true;
+  }
+  byte[] checkACKandGetBlock(byte[] r){
+    if((r[0]!=0) || (r[1]!=4)){
+      byte[] a = new byte[1];
+      a[0]=-1;
+      return a;
+    }
+    byte arr [] = new byte[2];
+    arr[0]=r[2];
+    arr[1]=r[3];
+    return arr;
+  }
+//get the file 
+  /*
+   * The function prints out the bytes of array "b" both as a string and bytes
+   * */
   void print(String str){
     //print out the information you're about to send
     System.out.print("Message as text: ");
@@ -171,6 +226,9 @@ public class Client extends Thread{
     System.out.println(Arrays.toString(b));//print as a binary
     
   }
+  /*
+   * The function prints out the bytes of array "b" both as a string and bytes
+   * */
   void print(byte[] b){
     //print out the information you're about to send
     String str = new String(b);
@@ -184,40 +242,41 @@ public class Client extends Thread{
   
   public void run(){
     try{
-      while(true){
+      //while(true){
         System.out.println("Hi, what type of request would you like to send: (read), (write) or (shutdown)");
         //String answer = scanner.nextLine().toLowerCase();
         String answer = "read";
         if(answer.equals("read")){
           System.out.println("What is the name of the file");
+          answer = "test.txt";
           //answer = scanner.nextLine().toLowerCase();
-          answer = "file.txt";
+          
           read(answer);
         } else if(answer.equals("write")){
           System.out.println("What is the name of the file");
           answer = scanner.nextLine().toLowerCase();
+          
           write(answer);
           
         } else if (answer.equals("shutdown")){
           System.out.println("Shuting down...");
-          break;
-          
+          //break;
         } else {
           System.out.println("Invalid request");
         }
-      }
+      //}
       
       System.out.println("Sockets closing, good bye");
       socket.close();
       
     } catch (Exception e){
       System.out.println("Error in run");
-      e.printStackTrace();
+      //e.printStackTrace();
       //System.exit(1);
     }
   }
   public static void main(String[] args){
     Client c = new Client();
-    c.run();
+    c.start();
   }
 }
