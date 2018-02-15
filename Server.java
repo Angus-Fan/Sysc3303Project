@@ -53,17 +53,17 @@ public class Server extends Thread{
     try{
       if(name.equals("mainServer")){
         //while(true){
-          System.out.println("Number of server threads created so far: "+servers.size());
-          System.out.println("What would you like to do: (shutdown) or (run)");
-          //String answer = scanner.nextLine();
-          String answer = "run";
-          if(answer.toLowerCase().equals("shutdown")){
-            System.out.println("Shuting down...");
-            shutdown();
-            //break;
-          } else if(answer.toLowerCase().equals("run")){
-            receiveConnections();
-          }
+        System.out.println("Number of server threads created so far: "+servers.size());
+        System.out.println("What would you like to do: (shutdown) or (run)");
+        //String answer = scanner.nextLine();
+        String answer = "run";
+        if(answer.toLowerCase().equals("shutdown")){
+          System.out.println("Shuting down...");
+          shutdown();
+          //break;
+        } else if(answer.toLowerCase().equals("run")){
+          receiveConnections();
+        }
         //}
       } else {
         handleConnections();
@@ -131,7 +131,8 @@ public class Server extends Thread{
         b1[2]=0;
         b1[3]=1;
         System.out.println("Server: sending an error packet");
-        DatagramPacket packet1 = new DatagramPacket(b1,512,packet.getAddress(),packet.getPort());
+        InetAddress address = InetAddress.getByName("127.0.0.1");
+        DatagramPacket packet1 = new DatagramPacket(b1,512,address,23);
         Thread.sleep(3000);
         socket1.send(packet1);
         
@@ -159,7 +160,7 @@ public class Server extends Thread{
         //send the data
         System.out.println("Server: Sending data packet");
         InetAddress address = InetAddress.getByName("127.0.0.1");
-        DatagramPacket packet1= new DatagramPacket(b1,516,address,69);
+        DatagramPacket packet1= new DatagramPacket(b1,516,address,23);
         Thread.sleep(4000);
         //print(b1);
         socket1.send(packet1);
@@ -218,7 +219,6 @@ public class Server extends Thread{
       String filename = getFileName(packet.getData());
       byte[] b1 = new byte[516];
       
-      
       File file = new File(path+filename);
       if(!file.exists()){
         file.createNewFile();
@@ -237,8 +237,8 @@ public class Server extends Thread{
         b1[3]=index2;
       }
       
-      DatagramPacket packet1 = new DatagramPacket(b1,516,packet.getAddress(),packet.getPort());
-      Thread.sleep(3000);
+      DatagramPacket packet1 = new DatagramPacket(b1,516,packet.getAddress(),23);
+      Thread.sleep(5000);
       socket1.send(packet1);
       
       //Trying to write to a read only file
@@ -323,6 +323,87 @@ public class Server extends Thread{
     //System.out.println("Filename: "+n);
     if(received[i]!=0) return false;
     return true;
+  }
+  //Author : Angus Fan
+  //function: errorPacket
+  //in: error number
+  //out: byte[] to send back
+  //desc: takes input for the number and creates a proper errorMsg bytes
+  //ERROR PACKET FOLLOWS THIS (OP CODE (2bytes), ERR CODE (2bytes), ERR MSG (string),0 byte)
+  public byte[] errorPacket(int errNum){
+    int errorMsgLength; 
+    byte[] errorMsgBytes;
+    byte[] errMsg = new byte[0];
+    String errorString;
+    if(errNum == 1) {
+      //filenotfound (might want to add the file name to the parameters)
+      errorString = "The file you requested was not found"; //like put the file name here
+      errorMsgBytes = errorString.getBytes();
+      errorMsgLength = (errorString.getBytes().length);
+      errMsg = new byte[errorMsgLength+5];
+      errMsg[0]=(byte)0;
+      errMsg[1]=(byte)5;
+      errMsg[2]=(byte)0;
+      errMsg[3]=(byte)1;
+      
+      System.arraycopy(errorMsgBytes,0,errMsg,4,errorMsgBytes.length);
+      errMsg[errMsg.length-1]=(byte)0;
+      
+    }
+    if(errNum == 2) {
+      //AccessViolation (might want to add the file name to the parameters)
+      errorString = "You do not have the permission to access this file"; //like put the file name here
+      errorMsgBytes = errorString.getBytes();
+      errorMsgLength = (errorString.getBytes().length);
+      errMsg = new byte[errorMsgLength+5];
+      errMsg[0]=(byte)0;
+      errMsg[1]=(byte)5;
+      errMsg[2]=(byte)0;
+      errMsg[3]=(byte)2;
+      
+      System.arraycopy(errorMsgBytes,0,errMsg,4,errorMsgBytes.length);
+      errMsg[errMsg.length-1]=(byte)0;
+      
+    }
+    if(errNum == 3) {
+      //DISKFULL (might want to add the file name to the parameters)
+      errorString = "The disk is full"; //like put the file name here
+      errorMsgBytes = errorString.getBytes();
+      errorMsgLength = (errorString.getBytes().length);
+      errMsg = new byte[errorMsgLength+5];
+      errMsg[0]=(byte)0;
+      errMsg[1]=(byte)5;
+      errMsg[2]=(byte)0;
+      errMsg[3]=(byte)3;
+      
+      System.arraycopy(errorMsgBytes,0,errMsg,4,errorMsgBytes.length);
+      errMsg[errMsg.length-1]=(byte)0;
+      
+    }
+    if(errNum == 6) {
+      //FileAlready Exists (might want to add the file name to the parameters)
+      errorString = "This file already exists"; //like put the file name here
+      errorMsgBytes = errorString.getBytes();
+      errorMsgLength = (errorString.getBytes().length);
+      errMsg = new byte[errorMsgLength+5];
+      errMsg[0]=(byte)0;
+      errMsg[1]=(byte)5;
+      errMsg[2]=(byte)0;
+      errMsg[3]=(byte)6;
+      
+      System.arraycopy(errorMsgBytes,0,errMsg,4,errorMsgBytes.length);
+      errMsg[errMsg.length-1]=(byte)0;
+      
+    }
+    else {
+      System.out.println("This err number you entered is not an errorCode: "+ errNum);
+    }
+    System.out.println("RETURNING THIS BYTE ARRAY");
+    for(int i=0;i<errMsg.length;i++) {
+      System.out.print(errMsg[i]);
+    }
+    System.out.println();
+    return errMsg;
   }
   /*
    * This function waits for all the threads created by the server
