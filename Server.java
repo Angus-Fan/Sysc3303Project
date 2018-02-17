@@ -275,6 +275,8 @@ public class Server extends Thread{
   //handle the write request
   
   synchronized void handleWriteRequest(){
+    System.out.println("Handling write request");
+    
     DatagramSocket socket1 = null;
     try{
       socket1 = new DatagramSocket();
@@ -282,29 +284,31 @@ public class Server extends Thread{
       
     }
     //send back a an acknowledgement
+    System.out.println("Send back an acknowledgement");
     String filename = getFileName(packet.getData());
-    byte[] b1 = new byte[516];
+    byte[] dataBytes = new byte[516];
     
     File file = new File(path+filename);
     if(!file.exists()){
       try{
         file.createNewFile();
       } catch (Exception e){
-        
+        System.out.println("Error creating file");
       }
     }
     if(file.canWrite()==false){
       //Access violation
-      b1 = errorPacket(2);
+      System.out.println("Access violation: can't write to file");
+      dataBytes = errorPacket(2);
       
     } else {
-      b1[0]=0;
-      b1[1]=4;
-      b1[2]=index1;
-      b1[3]=index2;
+      dataBytes[0]=0;
+      dataBytes[1]=4;
+      dataBytes[2]=index1;
+      dataBytes[3]=index2;
     }
     
-    DatagramPacket packet1 = new DatagramPacket(b1,516,packet.getAddress(),23);
+    DatagramPacket packet1 = new DatagramPacket(dataBytes,516,packet.getAddress(),23);
     try{
       Thread.sleep(5000);
       socket1.send(packet1);
@@ -349,6 +353,7 @@ public class Server extends Thread{
     try{
       byte[] b = new byte[516];
       packet = new DatagramPacket(b, 516);
+      System.out.println("Handling connections");
       
       socket.receive(packet);
       
