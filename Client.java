@@ -2,19 +2,17 @@
 /*
  * This is the client code, the code sends "read" and "write" request to the server.
  * */
-
 import java.net.*;
 import java.util.*;
 import java.io.*;
 
 public class Client extends Thread{
   DatagramSocket socket;//both send and receive
-  FileInputStream fi;
-  FileInputStream fii=null;
+  
+  FileInputStream fii = null;
   byte fileIndex =1;
-  Scanner scanner;
+  Scanner scanner = null;
   boolean loop = true;
-  List b;
   
   String path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/iteration2/Code/";
   
@@ -22,12 +20,9 @@ public class Client extends Thread{
     try{
       socket = new DatagramSocket();
       scanner = new Scanner(System.in);
-      b = new ArrayList();
       
     } catch (Exception e){
       System.out.println("Error in constructor");
-      //e.printStackTrace();
-      //System.exit(1);
     }
   }
   /*
@@ -37,7 +32,7 @@ public class Client extends Thread{
     try{
       System.out.println("\n==================================================");
       System.out.println("Client: Sending a read request");
-      byte[] foo = new byte[20];
+      byte[] foo = new byte[516];
       
       //first two strings are 0 and 1
       foo[0] = 0;
@@ -52,6 +47,9 @@ public class Client extends Thread{
         j++;
       }
       foo[j] =0;
+      //
+      String mode = "octet";
+      
       
       //print information
       String str = new String(foo);
@@ -59,11 +57,11 @@ public class Client extends Thread{
       
       InetAddress address = InetAddress.getByName("127.0.0.1");
       DatagramPacket readRequest = new DatagramPacket(foo,20,address,23);
-      Thread.sleep(3000);
+      Thread.sleep(2000);
+      
       
       //send read request
       socket.send(readRequest);
-      
       
       //keep accepting stuffs from the server until the size of the message is not up to 512
       while(true){
@@ -84,7 +82,6 @@ public class Client extends Thread{
           
         } else {
           byte[] responseByte = response.getData();
-          //b.add(responseByte);
           
           //send acknowledgement
           byte[] foo2 = new byte[516];
@@ -95,7 +92,7 @@ public class Client extends Thread{
           
           System.out.println("Client: Sending acknowledgement");
           DatagramPacket ack = new DatagramPacket(foo2, 516,address,23);
-          Thread.sleep(3000);
+          Thread.sleep(2000);
           socket.send(ack);
         }
         
@@ -104,6 +101,7 @@ public class Client extends Thread{
       System.out.println("Error in read");
     }
   }
+  //verify if the file sent is less than 512 bytes
   boolean verifySize(byte[] received){
     int i=4;
     while(i<516){
@@ -143,9 +141,9 @@ public class Client extends Thread{
       address = InetAddress.getByName("127.0.0.1");
       writeRequest = new DatagramPacket(foo,516,address,23);
       
-      Thread.sleep(3000);
+      Thread.sleep(2000);
       //send the request to the errorSimulator
-      socket.send(readRequest);
+      socket.send(writeRequest);
       //get the response from the server
       
       while(loop){
@@ -163,8 +161,7 @@ public class Client extends Thread{
           System.out.println("System didn't acknowledge");
           return;
         } else {
-          
-          if(fii!=null) fii = new FileInputStream(path+filename);
+          fii = new FileInputStream(path+filename);
           //Server has sent back an acknowledgement, send the rest of the file
           
           byte[] b2 = new byte[512];
@@ -186,7 +183,7 @@ public class Client extends Thread{
           address = InetAddress.getByName("127.0.0.1");
           DatagramPacket p =  new DatagramPacket(b2,516,address,23);
           //send the file to the server
-          Thread.sleep(3000);
+          Thread.sleep(2000);
           socket.send(p);
         }
       }
@@ -241,11 +238,11 @@ public class Client extends Thread{
   }
   
   public void run(){
-    try{
       //while(true){
         System.out.println("Hi, what type of request would you like to send: (read), (write) or (shutdown)");
         //String answer = scanner.nextLine().toLowerCase();
-        String answer = "read";
+        //String answer = "read";
+        String answer = "write";
         if(answer.equals("read")){
           System.out.println("What is the name of the file");
           answer = "test.txt";
@@ -254,7 +251,8 @@ public class Client extends Thread{
           read(answer);
         } else if(answer.equals("write")){
           System.out.println("What is the name of the file");
-          answer = scanner.nextLine().toLowerCase();
+          answer = "test.txt";
+          //answer = scanner.nextLine().toLowerCase();
           
           write(answer);
           
@@ -265,8 +263,9 @@ public class Client extends Thread{
           System.out.println("Invalid request");
         }
       //}
-      
+        try{
       System.out.println("Sockets closing, good bye");
+      fii.close();
       socket.close();
       
     } catch (Exception e){
