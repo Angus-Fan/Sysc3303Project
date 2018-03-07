@@ -561,9 +561,37 @@ public class Server extends Thread{
       errMsg[errMsg.length-1]=(byte)0;
       
     }
+    if(errNum==4) {
+    	 //   Illegal TFTP operation Exists (might want to add the file name to the parameters)
+        errorString = "The TFTP operation you attempted does not exist or has not been implemented"; //like put the file name here
+        errorMsgBytes = errorString.getBytes();
+        errorMsgLength = (errorString.getBytes().length);
+        errMsg = new byte[errorMsgLength+5];
+        errMsg[0]=(byte)0;
+        errMsg[1]=(byte)5;
+        errMsg[2]=(byte)0;
+        errMsg[3]=(byte)4;
+        
+        System.arraycopy(errorMsgBytes,0,errMsg,4,errorMsgBytes.length);
+        errMsg[errMsg.length-1]=(byte)0;
+    }
+    if(errNum==5) {
+   	 //   Illegal TFTP operation Exists (might want to add the file name to the parameters)
+       errorString = "The TFTP operation you attempted does not exist or has not been implemented"; //like put the file name here
+       errorMsgBytes = errorString.getBytes();
+       errorMsgLength = (errorString.getBytes().length);
+       errMsg = new byte[errorMsgLength+5];
+       errMsg[0]=(byte)0;
+       errMsg[1]=(byte)5;
+       errMsg[2]=(byte)0;
+       errMsg[3]=(byte)5;
+       
+       System.arraycopy(errorMsgBytes,0,errMsg,4,errorMsgBytes.length);
+       errMsg[errMsg.length-1]=(byte)0;
+   }
     if(errNum == 6) {
-      //FileAlready Exists (might want to add the file name to the parameters)
-      errorString = "This file already exists"; //like put the file name here
+      //Unknown transfer ID (might want to add the file name to the parameters)
+      errorString = "Unknown transfer ID"; //like put the file name here
       errorMsgBytes = errorString.getBytes();
       errorMsgLength = (errorString.getBytes().length);
       errMsg = new byte[errorMsgLength+5];
