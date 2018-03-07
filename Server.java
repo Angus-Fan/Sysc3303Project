@@ -17,9 +17,6 @@ public class Server extends Thread{
   String name = null;
   Scanner scanner = null;
   
-  byte index1 = 0;
-  byte index2 = 0;
-  
   //the path to access the file from, fill free to change this
   String path = null;
   
@@ -33,7 +30,7 @@ public class Server extends Thread{
       servers = new ArrayList<Server>();
       scanner = new Scanner(System.in);
       
-      path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration2/Code/";
+      path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/";
       
     } catch (Exception e){
       System.out.println("Error in server constructor");
@@ -42,7 +39,7 @@ public class Server extends Thread{
   Server(DatagramPacket packet){
     
     name = "notMainServer";
-    path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration2/Code/Client/";
+    path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/Client/";
     try{
       this.packet = packet;
     } catch(Exception e){
@@ -114,10 +111,11 @@ public class Server extends Thread{
     return false;
   }
   
-  
   //handle the read request, get the file from the server
   synchronized void handleReadRequest(){
-    path= "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration2/Code/";
+    byte blockNum1 =0;
+    byte blockNum2 =1;
+    path= "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/";
     DatagramSocket socket1 = null;
     InetAddress address = null;
     DatagramPacket packet1 = null;
@@ -169,14 +167,13 @@ public class Server extends Thread{
     //send the data from the file
     while(true){
       byte[] dataBytes = new byte[516];
-      //set the data block
+      //set the data block, 0 3 for ACK blocks
       dataBytes[0] = 0;
       dataBytes[1] = 3;
       //set the block number
-      dataBytes[2] = index1;
-      dataBytes[3] = index2;
+      dataBytes[2] = blockNum1;
+      dataBytes[3] = blockNum2;
       
-      //byte[] b2 = new byte[512];
       boolean checkSize1 = true;
       try{
         //read the file
@@ -197,7 +194,6 @@ public class Server extends Thread{
       //send the data
       System.out.println("Server: Sending fileBytes");
       //print(dataBytes);
-      //System.out.println(packet.getPort());
       DatagramPacket packet2= new DatagramPacket(dataBytes,516,address, packet.getPort());//-------
       
       try{
@@ -230,13 +226,34 @@ public class Server extends Thread{
       byte[] responseBytes2 = packet.getData();
       //client has sent back an acknowledgement
       if(responseBytes2[0]==0 && responseBytes2[1]==4){
-        if(index1==9){
-          index2+=1;
-          index1=0;
+        if(blockNum1==9){
+          blockNum2+=1;
+          blockNum1=0;
         } else {
-          ++index2;
+          ++blockNum2;
         }
+      } 
+      //duplicates
+      //check if a read request was sent (again), a previous block was sent,
+      //or an invalid opcode
+      byte a = responseBytes2[1];
+      byte a1 = responseBytes2[2];
+      
+      if(responseBytes2[1]< blockNum1){
+        
+        System.out.println("Server: Duplicate, sending previous fileBytes");
+      } else if(responseBytes2[1]==blockNum1 && responseBytes2[2]<blockNum2){
+        System.out.println("Server: Duplicate, sending previous fileBytes");
+        
       }
+      //lose packet
+      if(responseBytes2[1]>blockNum1){
+        System.out.println("Server: lose packet, a packet was not received before this one");
+      } else if(responseBytes2[1]>blockNum1 && responseBytes2[2]>blockNum2){
+        System.out.println("Server: lose packet, a packet was not received before this one");
+      }
+      
+      
       //check if the number of bytes sent was less than 512 bytes
       if(checkSize1==false){
         try{
@@ -263,7 +280,9 @@ public class Server extends Thread{
   //Function handles the writeRequst sent by the client
   
   synchronized void handleWriteRequest(){
-    path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration2/Code/Server/";
+    byte blockNum1=0;
+    byte blockNum2=0;
+    path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/Server/";
     System.out.println("Write request received");
     InetAddress address = null;
     DatagramSocket socket1 = null;
@@ -324,8 +343,8 @@ public class Server extends Thread{
     } else {
       dataBytes[0]=0;
       dataBytes[1]=4;
-      dataBytes[2]=index1;
-      dataBytes[3]=index2;
+      dataBytes[2]=blockNum1;
+      dataBytes[3]=blockNum2;
     }
     
     DatagramPacket acknowledgementPacket = new DatagramPacket(dataBytes,516,address, packet.getPort());
