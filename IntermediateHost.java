@@ -1,69 +1,205 @@
 //Group 8
 import java.net.*;
 import java.util.*;
-public class ErrorSimulator{
+public class ErrorSimulator extends Thread{
   
   DatagramSocket receiveSocket;//socket for receiving
-  DatagramSocket SARSocket;//socket for sending and receiving
-  DatagramPacket message;
+  DatagramSocket SARSocket = null;//socket for sending and receiving
   
+  DatagramPacket message = null;
+  List<ErrorSimulator> errorSimulators;
+  String name = "";
   
+  DatagramSocket sendToClient = null;
+  
+  int clientPort = -2;
+  int serverPort = -2;
+  boolean loop = true;
+  
+  //constructor for the main error Simulator
   ErrorSimulator(){
+    try{
+      name = "main errorSimulator";
+      errorSimulators = new ArrayList<ErrorSimulator>();
+      receiveSocket = new DatagramSocket(23);
+    } catch (Exception e){
+      System.out.println("Error in constructor");
+    }
   }
-  void run(){
-    try {
-      //repeat forever
-      while(true){
-        receiveSocket = new DatagramSocket(23);
-        SARSocket = new DatagramSocket();
+  //constructor for the client handling error simulator
+  ErrorSimulator(DatagramPacket message1){
+    this.message = message1;
+    name = "not main errorSimulator";
+    //initialize the appropriate sockets
+    try{
+      sendToClient = new DatagramSocket();
+      SARSocket = new DatagramSocket();
+      
+    } catch(Exception e){
+      System.out.println("Error in creating sendToClient socket");
+    }
+  }
+  
+  //run function for the error simulator
+  public void run(){
+    //repeat forever
+    if(name.equals("main errorSimulator")){
+      while(loop){
         
         System.out.println("\n====================================================================");
-        System.out.println("Intermediate host: initially waiting to receive a request from the client");
+        System.out.println("main ErrorSimulator: initially waiting to receive a request from the client");
         byte[] b1 = new byte[516];
-        message = new DatagramPacket(b1,516);
-        receiveSocket.receive(message);//wait to receive a message
-        System.out.println("message received");
+        DatagramPacket message1 = new DatagramPacket(b1,516);
+        try{
+          receiveSocket.receive(message1);//wait to receive a message
+        } catch(Exception e){
+          System.out.println("Error in receiving a datagramPacket");
+        }
+        System.out.println("read request received");
         
-        String str = new String(message.getData());
+        handleConnections(message1);
         
-        //print(str);
+      }
+      //Client handling threads
+    } else if (name.equals("not main errorSimulator")) {
+      System.out.println("not main errorSimulator: init");
+      //message: request doesn't change
+      
+      String str = new String(message.getData());
+      clientPort = message.getPort();//this is the client's port
+      InetAddress address = null;
+      
+      try{
         //create a packet to send containing exactly what you received
-        InetAddress address = InetAddress.getByName("127.0.0.1");
-        DatagramPacket packet = new DatagramPacket(message.getData(), message.getLength(), address, 69);
-        System.out.println("ErrorSimulator: Sending a packet containing exactly what it received to the Server"); 
+        address = InetAddress.getByName("127.0.0.1");
+      } catch(Exception e){
+        System.out.println("error in init address");
+      }
+      //send to part 69 (server)
+      boolean check = checkRequest(message.getData());
+      
+      DatagramPacket packet = null;
+      //send to the server
+      if(check==true){
+        System.out.println("not main errorSimulator: initially sending request to server");
+        //it's a request, send to port 69 (main server)
+        packet = new DatagramPacket(message.getData(), message.getLength(), address, 69);
+      } else {
+        System.out.println("not main errorSimulator: sending packet (Data/ack) to server");
+        //send to the server thread handling this request
+        packet = new DatagramPacket(message.getData(), message.getLength(), address, serverPort);
+      }
+      
+      try{
         Thread.sleep(3000);
-        SARSocket.send(packet);//sends to the server
+        //initialy sends to the main server, then later sends to the client handling thread
+        SARSocket.send(packet);
+      } catch(Exception e){
+        System.out.println("Error in Thread.sleep/sending a packet");
+      }
+      
+      //-----interaction----while loop --------------------------------------------------
+      while(true){
+        //receive from server
         
         byte [] b2 = new byte[516];
-        DatagramPacket packet1 = new DatagramPacket(b2, 516);
+        DatagramPacket receivedFromServer = new DatagramPacket(b2, 516);
         
         System.out.println("ErrorSimulator: Waiting for the server ");
-        SARSocket.receive(packet1);
+        try{
+          SARSocket.receive(receivedFromServer);
+        } catch(Exception e){
+          System.out.println("Error in receiving a packet");
+        }
+        //get server port
+        serverPort = receivedFromServer.getPort();
+        //The server thread that replied
+        //System.out.println("ServerPort "+ serverPort);
         
         
         System.out.println("ErrorSimulator: printing out information received from the Server");
-        str = new String(packet1.getData());
+        str = new String(receivedFromServer.getData());
         print(str);
-        DatagramPacket packet2 = new DatagramPacket(packet1.getData(),packet1.getLength(),
-                                                    message.getAddress(),message.getPort());
-        DatagramSocket sendToClient = new DatagramSocket();
-        System.out.println("ErrorSimulator: sending packet to Client");
-        Thread.sleep(3000);
-        sendToClient.send(packet2);
+        DatagramPacket sendPacketToClient = new DatagramPacket(receivedFromServer.getData(),receivedFromServer.getLength(),
+                                                               message.getAddress(),message.getPort());
+        loop = checkSize(message.getData());
         
-        System.out.println("Closing sockets");
-        sendToClient.close();
-        receiveSocket.close();
-        SARSocket.close();
+        //socket to send back to the client
+        System.out.println("message port: "+message.getPort());
+        
+        try{
+          System.out.println("ErrorSimulator: sending packet to Client");
+          Thread.sleep(3000);
+          
+          sendToClient.send(sendPacketToClient);
+          
+        } catch(Exception e){
+          System.out.println("Error in Thread.sleep/sending packet");
+        }
+        //receive from client
+        System.out.println("errorSimulator: waiting for packet from client");
+        
+        byte[] b3 = new byte[516];
+        DatagramPacket packetFromClient = new DatagramPacket(b3,516);
+        try{
+          sendToClient.receive(packetFromClient);
+        } catch(Exception e){
+          System.out.println("Error sending to client");
+        }
+        
+        System.out.println("errorSimulator: received packet from client");
+        System.out.println("errorSimulator: sending packet to server");
+        DatagramPacket sendPacketToServer = new DatagramPacket(packetFromClient.getData(), packetFromClient.getLength(),
+                                                               receivedFromServer.getAddress(), receivedFromServer.getPort());
+        
+        
+        try{
+        SARSocket.send(sendPacketToServer);
+        } catch(Exception e){
+          System.out.println("Error sending to server");
+        }
+        //if(loop == false) break;
+        
+        
         System.out.println("===================================================================");
       }
-    } catch (Exception e){
-      System.out.println("Error in run");
-      //e.printStackTrace();
-      System.exit(1);
+    }
+    shutdown();
+    
+  }
+  
+  boolean checkRequest(byte[] data){
+    if((data[0]==0 && data[1]==1) || (data[0]==0 && data[1]==2)) return true;
+    
+    return false;
+  }
+  //function handles client connections
+  void handleConnections(DatagramPacket message){
+    ErrorSimulator e = new ErrorSimulator(message);
+    errorSimulators.add(e);
+    e.start();
+    
+    
+  }
+  
+  //shutdown the sockets
+  private void shutdown(){
+    System.out.println("Closing socket");
+    SARSocket.close();
+    sendToClient.close();
+    
+    //wait for the other errorSimulators to finish
+    for(ErrorSimulator e: errorSimulators){
+      try{
+        e.join();
+      } catch(Exception ee){
+        System.out.println("Error in shuting down");
+      }
     }
     
   }
+  
+  
   void print(String str){
     //print out the information you're about to send
     System.out.print("Message as text: ");
@@ -74,10 +210,20 @@ public class ErrorSimulator{
     System.out.println(Arrays.toString(b));//print as a binary
     System.out.println();
   }
+  //check the size of the data being sent
+  boolean checkSize(byte[] data){
+    if(data[0]==0 && data[1]==4) return true;//ACK message
+    if(data[0]==0 && data[1]==5) return true;//error message
+    
+    for(int i =4;i<512;i++){
+      if(data[i]==0) return false;
+    }
+    return true;
+  }
   
   public static void main(String [] args){
     ErrorSimulator errorSimulator = new ErrorSimulator();
-    errorSimulator.run();
+    errorSimulator.start();
   }
   
 }
