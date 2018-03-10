@@ -223,7 +223,13 @@ public class Server extends Thread{
         System.out.println("We timed out while waiting to receive ack packet");
         //We are going to resend the packet 
         System.out.println("Resending Packet to client");
-        resendPacket(socket1,packet2);
+        try{
+            Thread.sleep(3000);
+            socket1.send(packet2);
+            
+          } catch (Exception t){
+            System.out.println("Error in sending packet/sleep");
+          }
         
      
         
@@ -521,15 +527,7 @@ public class Server extends Thread{
     if(received[i]!=0) return false;
     return true;
   }
-  void resendPacket(DatagramSocket socketUsed,DatagramPacket packetToSend){
-	  try{
-	      Thread.sleep(3000);
-	      socketUsed.send(packetToSend);
-	      
-	    } catch (Exception e){
-	      System.out.println("Error in sending packet/sleep");
-	    }
-  }
+  
   //function: errorPacket
   //in: error number
   //out: byte[] to send back
