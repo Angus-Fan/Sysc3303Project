@@ -18,7 +18,7 @@ public class Server extends Thread{
   Scanner scanner = null;
   
   //the path to access the file from, fill free to change this
-  String path = null;
+  String path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/";
   
   List<Server> servers;
   
@@ -30,16 +30,12 @@ public class Server extends Thread{
       servers = new ArrayList<Server>();
       scanner = new Scanner(System.in);
       
-      path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/";
-      
     } catch (Exception e){
       System.out.println("Error in server constructor");
     }
   }
   Server(DatagramPacket packet){
-    
     name = "notMainServer";
-    path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/Client/";
     try{
       this.packet = packet;
     } catch(Exception e){
@@ -54,17 +50,23 @@ public class Server extends Thread{
     try{
       if(name.equals("mainServer")){
         while(true){
-        System.out.println("Number of server threads created so far: "+servers.size());
-        System.out.println("What would you like to do: (shutdown) or (run)");
-        String answer = scanner.nextLine();
-        //String answer = "run";
-        if(answer.toLowerCase().equals("shutdown")){
-          System.out.println("Shuting down...");
-          shutdown();
-          //break;
-        } else if(answer.toLowerCase().equals("run")){
-          receiveConnections();
-        }
+          System.out.println("Number of server threads created so far: "+servers.size());
+          System.out.println("What would you like to do: (shutdown) or (run)");
+          String answer = scanner.nextLine();
+          if(answer.toLowerCase().equals("shutdown")){
+            System.out.println("Shuting down...");
+            shutdown();
+            break;
+          } else if(answer.toLowerCase().equals("run")){
+            System.out.println("Would you like to enter a path name: (yes or no)");
+            String answer2 = scanner.nextLine().toLowerCase();
+            
+            if(answer2.equals("yes")){
+              System.out.println("Please enter a pathname: ");
+              this.path = scanner.nextLine();
+            }
+            receiveConnections();
+          }
         }
       } else {
         handleConnections();
@@ -105,20 +107,21 @@ public class Server extends Thread{
       System.out.println("an error in one of the thread's handling function, bye");
     }
   }
-  boolean ackValid(byte [] response){
+  //check if the acknowledgement is valid
+  private boolean ackValid(byte [] response){
     if((response[0]==0) && (response[1]==4)) return true;
     
     return false;
   }
   
   //handle the read request, get the file from the server
-  synchronized void handleReadRequest() throws IOException{
+  private synchronized void handleReadRequest(){
     byte blockNum1 =0;
     byte blockNum2 =1;
-    path= "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/";
     DatagramSocket socket1 = null;
     InetAddress address = null;
     DatagramPacket packet1 = null;
+    DatagramPacket lastPacket = null;
     
     try{
       socket1 = new DatagramSocket();
@@ -127,8 +130,6 @@ public class Server extends Thread{
     } catch (Exception e){
       System.out.println("Error in socket1 init");
     }
-    
-    
     
     String filename = getFileName(packet.getData());
     
@@ -155,8 +156,6 @@ public class Server extends Thread{
       socket1.close();
       return;
     }
-    
-    
     FileInputStream fileInputStream=null;
     try{
       fileInputStream= new FileInputStream(file);
@@ -195,9 +194,10 @@ public class Server extends Thread{
       System.out.println("Server: Sending fileBytes");
       //print(dataBytes);
       DatagramPacket packet2= new DatagramPacket(dataBytes,516,address, packet.getPort());//-------
+      lastPacket = packet2;
       
       try{
-        Thread.sleep(3000);
+        Thread.sleep(1000);
         socket1.send(packet2);
         
       } catch (Exception e){
@@ -210,40 +210,44 @@ public class Server extends Thread{
       //receive the acknowledgement
       byte[] responseBytes1 = new byte[516];
       DatagramPacket responsePacket = new DatagramPacket(responseBytes1, 516);
-      //ITERATION 3 ( if timeout resend packet )
-      //WAITING FOR TIMEOUT 10 SECONDS
-      socket1.setSoTimeout(10000);
-      try{
-    	
-        System.out.println("Server: waiting to receive acknowledgement packet");
-        socket1.receive(responsePacket);
-        
-        
-      } catch (SocketTimeoutException e){
-        System.out.println("We timed out while waiting to receive ack packet");
-        //We are going to resend the packet 
-        System.out.println("Resending Packet to client");
+      
+      while(true){
         try{
-            Thread.sleep(3000);
-            socket1.send(packet2);
-            
-          } catch (Exception t){
-            System.out.println("Error in sending packet/sleep");
+          
+          socket1.setSoTimeout(12000);//12 seconds
+          System.out.println("Server: waiting to receive acknowledgement packet");
+          socket1.receive(responsePacket);
+          break;
+          
+        } catch (SocketException e){
+          //the socket has timed out
+          System.out.println("Server: Socket timedout, retransmiting...");
+          try{
+            socket1.send(lastPacket);
+          } catch(Exception eee){
+            System.out.println("Server: Error in retransmitting...");
           }
+        } catch (IOException ee){
+          System.out.println("Error receiving packet");
+        }
         
-     
-        
-      }/*
-      This was the previous catch statement changed to timeout for Iteration 3
-      catch (Exception e){
-          System.out.println("Error in receiving packet");
-        }*/
-        
-      	
-      	
-      //}
+      }
       
       //---------------------------------------------------
+      //check for duplicate ACK packets
+      //duplicates
+      //check if a read request was sent (again), a duplicate block was sent,
+      byte[] r = responsePacket.getData();
+      
+      if(r[1]< blockNum1){
+        System.out.println("Server: Duplicate acknowledgement packet was received, ignored");
+        continue;
+      } else if(r[1]==blockNum1 && r[2]<blockNum2){
+        System.out.println("Server: Duplicate acknowledgement packet was received, ignored");
+        continue;
+      }
+      
+      //----------------------------------------------
       
       System.out.println("Server: Acknowledgement recevied");
       byte[] responseBytes2 = packet.getData();
@@ -256,25 +260,7 @@ public class Server extends Thread{
           ++blockNum2;
         }
       } 
-      //duplicates
-      //check if a read request was sent (again), a previous block was sent,
-      //or an invalid opcode
-      byte a = responseBytes2[1];
-      byte a1 = responseBytes2[2];
       
-      if(responseBytes2[1]< blockNum1){
-        
-        System.out.println("Server: Duplicate, sending previous fileBytes");
-      } else if(responseBytes2[1]==blockNum1 && responseBytes2[2]<blockNum2){
-        System.out.println("Server: Duplicate, sending previous fileBytes");
-        
-      }
-      //lose packet
-      if(responseBytes2[1]>blockNum1){
-        System.out.println("Server: lose packet, a packet was not received before this one");
-      } else if(responseBytes2[1]>blockNum1 && responseBytes2[2]>blockNum2){
-        System.out.println("Server: lose packet, a packet was not received before this one");
-      }
       
       
       //check if the number of bytes sent was less than 512 bytes
@@ -288,11 +274,11 @@ public class Server extends Thread{
         }
         break;
       }
-      //System.out.println("CheckSize1");
     }
     
   }
-  synchronized boolean checkSize(byte[] data){
+  //check the size of the data, to see if it's less than 514
+  private synchronized boolean checkSize(byte[] data){
     for(int i =4;i<516;i++){
       if(data[i]==0){
         return false;
@@ -300,12 +286,12 @@ public class Server extends Thread{
     }
     return true;
   }
-  //Function handles the writeRequst sent by the client
   
-  synchronized void handleWriteRequest(){
+  //Function handles the writeRequst sent by the client
+  private synchronized void handleWriteRequest(){//------------------------------------------------------------------------HandleWrite Request
     byte blockNum1=0;
     byte blockNum2=0;
-    path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/Server/";
+    path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration2/Code/Server/";
     System.out.println("Write request received");
     InetAddress address = null;
     DatagramSocket socket1 = null;
@@ -348,7 +334,6 @@ public class Server extends Thread{
       } catch(Exception e){
         System.out.println("Error in creating new file");
       }
-      
     }
     
     if(file.canWrite()==false){
@@ -398,21 +383,37 @@ public class Server extends Thread{
           System.out.println("Error sending error packet");
         }
       }
-        //receive data
-        byte[] responseDataBytes = new byte[516];
+      //receive data
+      byte[] responseDataBytes = new byte[516];
       DatagramPacket responseDataPacket = new DatagramPacket(responseDataBytes, 516);
       try{
+        //receive dataPacket
         socket1.receive(responseDataPacket);
         loop = checkSize(responseDataPacket.getData());
+        
         System.out.println("Server: Data received");
-      } catch (Exception e){
-        System.out.println("Error in receciving");
+      }  catch (IOException ee){
+        
       }
+      
+      
+      //Check------------------------------
+      //Check if it's a duplicate or another request
+      byte[] data = responseDataPacket.getData();
+      
+      if(data[2]<blockNum1){
+        System.out.println("Server: duplicate packet was received, ignoring");
+        continue;
+      } else if(data[2]==blockNum1 && data[3]<blockNum2){
+        System.out.println("Server: duplicate packet was received, ignoring");
+        continue;
+      }
+      //------------------
       try{
         //write the Data to the file
         //print(responseDataPacket.getData());
         System.out.println("Server: writing the bytes to the file");
-        byte[] data = responseDataPacket.getData();
+        
         for(int i =4;i<516;i++){
           data[i-4]=data[i];
         }
@@ -451,7 +452,8 @@ public class Server extends Thread{
     }
     
   }
-  int checkSizeAndReturn(byte[] data){
+  //check the size and return a number
+  private int checkSizeAndReturn(byte[] data){
     for(int i =0;i<512;i++){
       if(data[i]==0) return i;
     }
@@ -459,7 +461,7 @@ public class Server extends Thread{
   }
   
   //Function gets the name of the file and returns it
-  String getFileName(byte [] received){
+  private String getFileName(byte [] received){
     
     int index =2;
     while(received[index]!=0){
@@ -480,7 +482,7 @@ public class Server extends Thread{
    * This function is only executed by the main server. It is used to recieve
    * messages from the Error simulator and pass it on to a server
    * */
-  void receiveConnections(){
+  private void receiveConnections(){
     try{
       byte[] b = new byte[516];
       DatagramPacket packet = new DatagramPacket(b, 516);
@@ -499,7 +501,7 @@ public class Server extends Thread{
   /*
    * This function checks if the message received is valid
    * */
-  boolean check(byte[] received){
+  private boolean check(byte[] received){
     if(received[0]!=0){
       System.out.println("Invalid request");
       return false;
@@ -584,37 +586,9 @@ public class Server extends Thread{
       errMsg[errMsg.length-1]=(byte)0;
       
     }
-    if(errNum==4) {
-    	 //   Illegal TFTP operation Exists (might want to add the file name to the parameters)
-        errorString = "The TFTP operation you attempted does not exist or has not been implemented"; //like put the file name here
-        errorMsgBytes = errorString.getBytes();
-        errorMsgLength = (errorString.getBytes().length);
-        errMsg = new byte[errorMsgLength+5];
-        errMsg[0]=(byte)0;
-        errMsg[1]=(byte)5;
-        errMsg[2]=(byte)0;
-        errMsg[3]=(byte)4;
-        
-        System.arraycopy(errorMsgBytes,0,errMsg,4,errorMsgBytes.length);
-        errMsg[errMsg.length-1]=(byte)0;
-    }
-    if(errNum==5) {
-   	 //   Illegal TFTP operation Exists (might want to add the file name to the parameters)
-       errorString = "The TFTP operation you attempted does not exist or has not been implemented"; //like put the file name here
-       errorMsgBytes = errorString.getBytes();
-       errorMsgLength = (errorString.getBytes().length);
-       errMsg = new byte[errorMsgLength+5];
-       errMsg[0]=(byte)0;
-       errMsg[1]=(byte)5;
-       errMsg[2]=(byte)0;
-       errMsg[3]=(byte)5;
-       
-       System.arraycopy(errorMsgBytes,0,errMsg,4,errorMsgBytes.length);
-       errMsg[errMsg.length-1]=(byte)0;
-   }
     if(errNum == 6) {
-      //Unknown transfer ID (might want to add the file name to the parameters)
-      errorString = "Unknown transfer ID"; //like put the file name here
+      //FileAlready Exists (might want to add the file name to the parameters)
+      errorString = "This file already exists"; //like put the file name here
       errorMsgBytes = errorString.getBytes();
       errorMsgLength = (errorString.getBytes().length);
       errMsg = new byte[errorMsgLength+5];
@@ -638,7 +612,7 @@ public class Server extends Thread{
     return errMsg;
   }
   //print the bytes as strings
-  void print(byte[] data){
+  private void print(byte[] data){
     for(int i =0;i<512;i++){
       System.out.print(data[i]+" ");
     }
@@ -647,7 +621,7 @@ public class Server extends Thread{
    * This function waits for all the threads created by the server
    * to finish before it shutsdown
    * */
-  void shutdown(){
+  private void shutdown(){
     try{
       for(Server s: servers){
         s.join();
