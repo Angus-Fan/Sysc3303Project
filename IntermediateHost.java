@@ -66,6 +66,8 @@ public class ErrorSimulator extends Thread{
       //message: request doesn't change
       
       String str = new String(message.getData());
+      System.out.println("not main errorSimulator: printing packet");
+      print(str);
       clientPort = message.getPort();//this is the client's port
       InetAddress address = null;
       
@@ -91,7 +93,7 @@ public class ErrorSimulator extends Thread{
       }
       
       try{
-        Thread.sleep(3000);
+        Thread.sleep(1000);
         //initialy sends to the main server, then later sends to the client handling thread
         SARSocket.send(packet);
       } catch(Exception e){
@@ -108,6 +110,8 @@ public class ErrorSimulator extends Thread{
         System.out.println("ErrorSimulator: Waiting for the server ");
         try{
           SARSocket.receive(receivedFromServer);
+          System.out.println("non main errorSimulator: printing...");
+
         } catch(Exception e){
           System.out.println("Error in receiving a packet");
         }
@@ -125,11 +129,14 @@ public class ErrorSimulator extends Thread{
         loop = checkSize(message.getData());
         
         //socket to send back to the client
-        System.out.println("message port: "+message.getPort());
+        //System.out.println("message port: "+message.getPort());
         
         try{
           System.out.println("ErrorSimulator: sending packet to Client");
-          Thread.sleep(3000);
+          Thread.sleep(1000);
+          System.out.println("ErrorSimulator: Printing...");
+          str = new String (receivedFromServer.getData());
+          print(str);
           
           sendToClient.send(sendPacketToClient);
           
@@ -144,8 +151,11 @@ public class ErrorSimulator extends Thread{
         try{
           sendToClient.receive(packetFromClient);
         } catch(Exception e){
-          System.out.println("Error sending to client");
+          System.out.println("Error receiving to client");
         }
+        
+        str = new String(packetFromClient.getData());
+        print(str);
         
         System.out.println("errorSimulator: received packet from client");
         System.out.println("errorSimulator: sending packet to server");
@@ -153,8 +163,12 @@ public class ErrorSimulator extends Thread{
                                                                receivedFromServer.getAddress(), receivedFromServer.getPort());
         
         
+        str = new String (packetFromClient.getData());
+        print(str);
         try{
-        SARSocket.send(sendPacketToServer);
+          
+          
+          SARSocket.send(sendPacketToServer);
         } catch(Exception e){
           System.out.println("Error sending to server");
         }
