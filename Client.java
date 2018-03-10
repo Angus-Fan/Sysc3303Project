@@ -186,7 +186,7 @@ public class Client extends Thread{
   /*
    * Function sends a write request to the ErrorSiumulator
    * */
-  private void write(String filename){
+  private void write(String filename) throws IOException{
     byte[] writeRequest = new byte[516];
     InetAddress address = null;
     DatagramPacket writeRequestPacket = null;
@@ -226,13 +226,22 @@ public class Client extends Thread{
     while(loop){
       byte[] ackBytes = new byte[516];
       DatagramPacket ackPacket = new DatagramPacket(ackBytes, 516);
-      
+      //ITERATION 3 (TIME-OUT)
       System.out.println("Client: waiting for an acknowledgement ");
-      
+      socket.setSoTimeout(10000);
       try{
         socket.receive(ackPacket);
-      } catch (Exception e){
-        System.out.println("Error in receiving acknowledgment");
+      } catch (SocketTimeoutException e){
+        //System.out.println("Error in receiving acknowledgment");
+    	  System.out.println("Acknowledgement Timed-out, resending the packet");
+    	  try{
+    	      writeRequestPacket = new DatagramPacket(writeRequest,516,address,23);
+    	      
+    	      Thread.sleep(2000);
+    	      socket.send(writeRequestPacket);
+    	    } catch(Exception t){
+    	      System.out.println("Error in sending writeRequest/sleep");
+    	    }
       }
       
       System.out.println("Client: acknowledgment received");

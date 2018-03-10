@@ -112,7 +112,7 @@ public class Server extends Thread{
   }
   
   //handle the read request, get the file from the server
-  synchronized void handleReadRequest(){
+  synchronized void handleReadRequest() throws IOException{
     byte blockNum1 =0;
     byte blockNum2 =1;
     path= "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/";
@@ -210,14 +210,31 @@ public class Server extends Thread{
       //receive the acknowledgement
       byte[] responseBytes1 = new byte[516];
       DatagramPacket responsePacket = new DatagramPacket(responseBytes1, 516);
-      
+      //ITERATION 3 ( if timeout resend packet )
+      //WAITING FOR TIMEOUT 10 SECONDS
+      socket1.setSoTimeout(10000);
       try{
-        //socket1.setSoTimeout(4000);
+    	
         System.out.println("Server: waiting to receive acknowledgement packet");
         socket1.receive(responsePacket);
-      } catch (Exception e){
-        System.out.println("Error in receiving packet");
-      }
+        
+        
+      } catch (SocketTimeoutException e){
+        System.out.println("We timed out while waiting to receive ack packet");
+        //We are going to resend the packet 
+        System.out.println("Resending Packet to client");
+        resendPacket(socket1,packet2);
+        
+     
+        
+      }/*
+      This was the previous catch statement changed to timeout for Iteration 3
+      catch (Exception e){
+          System.out.println("Error in receiving packet");
+        }*/
+        
+      	
+      	
       //}
       
       //---------------------------------------------------
@@ -504,7 +521,15 @@ public class Server extends Thread{
     if(received[i]!=0) return false;
     return true;
   }
-  
+  void resendPacket(DatagramSocket socketUsed,DatagramPacket packetToSend){
+	  try{
+	      Thread.sleep(3000);
+	      socketUsed.send(packetToSend);
+	      
+	    } catch (Exception e){
+	      System.out.println("Error in sending packet/sleep");
+	    }
+  }
   //function: errorPacket
   //in: error number
   //out: byte[] to send back
