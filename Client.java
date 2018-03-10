@@ -8,40 +8,34 @@ import java.io.*;
 
 public class Client extends Thread{
   private DatagramSocket socket;//both send and receive
-  
-  FileInputStream fileInputStream = null;
   Scanner scanner = null;
   boolean loop = true;
   
-  String path = null;
+  String path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/Client/";
   
   Client(){
     try{
       socket = new DatagramSocket();
       scanner = new Scanner(System.in);
-      path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration3/Code/";
       
     } catch (Exception e){
       System.out.println("Error in constructor");
     }
   }
   /*
-   * Function sends a read request to the ErrorSimulator
+   * Function handles sending a read request to the errorSimulator
    * */
-  private void read(String filename){
-    byte blockNum1 =0;
-    byte blockNum2 =1;
-    InetAddress address = null;
-    
+  private void sendReadRequest(String filename){
     System.out.println("\n==================================================");
     System.out.println("Client: Sending a read request");
-    byte[] readRequestBytes = new byte[516];
+    InetAddress address = null;
     
     try{
       address = InetAddress.getByName("127.0.0.1");
     } catch(Exception e){
       System.out.println("Error in InetAddress");
     }
+    byte[] readRequestBytes = new byte[516];
     
     //first two strings are 0 and 1
     readRequestBytes[0] = 0;
@@ -87,50 +81,85 @@ public class Client extends Thread{
     } catch (Exception e){
       System.out.println("Error in sending Read request");
     }
+    
     boolean loop = true;
     
-    //keep accepting stuffs from the server until the size of the message is not up to 512
+  }
+  //function sends a read request to the server
+  private void read(String filename){
+    byte blockNum1 =0;
+    byte blockNum2 =1;
+    InetAddress address = null;
+   
+    
+    try{
+      address = InetAddress.getByName("127.0.0.1");
+    } catch(Exception e){
+      System.out.println("Error in InetAddress");
+    }
+    
+    sendReadRequest(filename);
+    boolean loop = true;
+    FileOutputStream fo = null;
+    try{
+      fo = new FileOutputStream(path+filename);
+    } catch (Exception e){
+      System.out.println("Error in opening file");
+    }
+    
+    //keep accepting stuffs from the server until the size of the message is less than 512
     while(loop){
       byte[] dataBytes = new byte[516];
       DatagramPacket dataPacket = new DatagramPacket(dataBytes, 516);
       
-      //data received from Server
+      //datapacket received from Server
       try{
         System.out.println("Client: waiting for Data packet");
         socket.receive(dataPacket);
         
         System.out.println("Client: Data packet received");
-      } catch(Exception e){
+      } catch(IOException e){
         System.out.println("Error in receiving response");
       }
       
       //check
-      //if block number is less than current block number, if the opcode is invalid
+      //if block number is less than current block number
       
+      //If the Client received a duplicate package ignore it
+      byte[] dataPacket2 = dataPacket.getData();
+      
+      if(dataPacket2[2]<blockNum1){
+        System.out.println("Client: duplicate Data block received and, ignored");
+        continue;
+      } else if(dataPacket2[2]==blockNum1 && dataPacket2[3]<blockNum2){
+        System.out.println("Client: duplicate Data block received, and ignored");
+        continue;
+      }
+      
+      //----------------------------------------------------------------------------
+      
+      //checks if the size of the data is less than 512
       
       if(checkSize(dataPacket.getData()) == false){
         //send the last acknowledgement
         loop = false;
-        System.out.println("That is all");
-        try{
-        fileInputStream.close();
-        } catch (Exception e){
-          System.out.println("Error closing file input stream");
-        }
+        System.out.println("Final set of blocks sent");
+        /*
+         try{
+         fileInputStream.close();
+         } catch (Exception e){
+         System.out.println("Error closing file input stream");
+         }*/
       }
-      //
-      byte[] a = dataPacket.getData();
-      //check opcode
-      //check block number
-      if(a[2]<blockNum1){
-        
-      }else if(a[2]==blockNum1 && a[3]<blockNum2){
-        System.out.println("Client: Duplicate...");
-        //ignore
-        System.out.println("Client: ignoring duplicate");
-      }
+      
       //--
       byte[] dataBytes2 = dataPacket.getData();
+      //write to file
+      try{
+        //fo.write(dataBytes2,4, 514);
+      } catch (Exception e){
+        System.out.println("Error writing to file");
+      }
       
       //send acknowledgement
       byte[] ackBytes = new byte[516];
@@ -148,13 +177,22 @@ public class Client extends Thread{
       } catch(Exception e){
         System.out.println("Error in sending acknowledgement");
       }
-      
-      
     }
     
   }
   //Function creates a packet to be sent
-  private void createPacket(byte[] writeRequest, String filename){
+  private void sendWriteRequest( String filename){
+    DatagramPacket writeRequestPacket = null;
+    
+    String string = null;
+    byte[] writeRequest = new byte[516];
+    
+    InetAddress address = null;
+    try{
+      address = InetAddress.getByName("127.0.0.1");
+    } catch(Exception e){
+      System.out.println("Error in inetAddress");
+    }
     //first two strings are 0 and 2
     writeRequest[0] = 0;
     writeRequest[1] = 2;
@@ -182,28 +220,6 @@ public class Client extends Thread{
      }
      writeRequest[j]=0;
      */
-  }
-  /*
-   * Function sends a write request to the ErrorSiumulator
-   * */
-  private void write(String filename) throws IOException{
-    byte[] writeRequest = new byte[516];
-    InetAddress address = null;
-    DatagramPacket writeRequestPacket = null;
-    String string = null;
-    
-    try{
-      address = InetAddress.getByName("127.0.0.1");
-    } catch (Exception e){
-      System.out.println("Error in InetAddress");
-    }
-    
-    System.out.println("\n==================================================");
-    System.out.println("Client: Sending a write request");
-    
-    
-    createPacket(writeRequest, filename);
-    
     //print out the message
     string = new String(writeRequest);
     print(string);
@@ -216,32 +232,71 @@ public class Client extends Thread{
     } catch(Exception e){
       System.out.println("Error in sending writeRequest/sleep");
     }
-    //get the response from the server
+  }
+  
+  
+  /*
+   * Function sends a write request to the ErrorSiumulator
+   * */
+  private void write(String filename){
+    InetAddress address = null;
+    FileInputStream fileInputStream = null;
+    byte blockNum1 = 0;
+    byte blockNum2 =0;
+    
+    DatagramPacket lastDataPacket = null;
+    
+    try{
+      address = InetAddress.getByName("127.0.0.1");
+    } catch (Exception e){
+      System.out.println("Error in InetAddress");
+    }
+    
+    
+    System.out.println("\n==================================================");
+    System.out.println("Client: Sending a write request");
+    sendWriteRequest( filename);
+    
+    
+    //open the file
     try{
       fileInputStream = new FileInputStream(path+filename);
     } catch (Exception e){
-      System.out.println("Error in init inputStream");
+      System.out.println("Error in opeingn file inputStream");
     }
     
     while(loop){
       byte[] ackBytes = new byte[516];
       DatagramPacket ackPacket = new DatagramPacket(ackBytes, 516);
-      //ITERATION 3 (TIME-OUT)
+      
       System.out.println("Client: waiting for an acknowledgement ");
-      socket.setSoTimeout(10000);
-      try{
-        socket.receive(ackPacket);
-      } catch (SocketTimeoutException e){
-        //System.out.println("Error in receiving acknowledgment");
-    	  System.out.println("Acknowledgement Timed-out, resending the packet");
-    	  try{
-    	      writeRequestPacket = new DatagramPacket(writeRequest,516,address,23);
-    	      
-    	      Thread.sleep(2000);
-    	      socket.send(writeRequestPacket);
-    	    } catch(Exception t){
-    	      System.out.println("Error in sending writeRequest/sleep");
-    	    }
+      while(true){
+        try{
+          socket.setSoTimeout(10000);
+          socket.receive(ackPacket);
+          break;
+        }  catch (SocketException se){
+          System.out.println("Client: didn't receive an acknowledgement withing time period, retransmiting...");
+          //resend the last thing you sent
+          try{
+            socket.send(lastDataPacket);
+          } catch (Exception eee){
+            System.out.println("Client: error sending lastDataPacket");
+          }
+        } catch (IOException e){
+          System.out.println("Error in receiving acknowledgment");
+        }
+      }
+      
+      //check for duplicate ACKPacket
+      byte[] checkDuplicate = ackPacket.getData();
+      
+      if(checkDuplicate[2] < blockNum1){
+        System.out.println("Client: duplicate ack received, and ignored");
+        continue;
+      } else if(checkDuplicate[2]==blockNum1 && checkDuplicate[3]<blockNum2){
+        System.out.println("Client: duplicate ack received, and ignored");
+        continue;
       }
       
       System.out.println("Client: acknowledgment received");
@@ -253,37 +308,34 @@ public class Client extends Thread{
       
       if(answer[0]==-1){
         System.out.println("System didn't acknowledge, an error occured");
+        System.out.println("");
         return;
       } else {
-        try{
-          //create a file stream for the file
-          
-        } catch(Exception e){
-          System.out.println("Error in init fileInputStream");
-        }
         //Server has sent back an acknowledgement, send the rest of the file
         
-        //byte[] fileBytes = new byte[512];
         byte[] dataBytes = new byte[516];
         
         dataBytes[0]=0;
         dataBytes[1]=3;
         //
-        if(answer[1]==9){
-          answer[1]=0;
-          answer[0]+=1;
+        if(answer[3]==9){
+          answer[2]+=1;
+          answer[3]=0;
         } else{
-          answer[1]+=1;
+          answer[3]+=1;
         }
-        dataBytes[2]=answer[0];
-        dataBytes[3]=answer[1];
+        
+        dataBytes[2]=answer[2];
+        dataBytes[3]=answer[3];
+        
+        blockNum1= answer[2];
+        blockNum2= answer[3];
         
         try{
           //check how much bytes are left
           if(fileInputStream.available()<=512){
             System.out.println("Last set of bytes");
             loop= false;
-            
           }
           
           //read more of the file and send it--------------------------
@@ -293,15 +345,19 @@ public class Client extends Thread{
           System.out.println("Error reading file");
         }
         
-        DatagramPacket p =  new DatagramPacket(dataBytes,516,address,ackPacket.getPort());
+        DatagramPacket dataPacket =  new DatagramPacket(dataBytes,516,address,ackPacket.getPort());
+        lastDataPacket = dataPacket;
         //send the file to the server
         try{
           Thread.sleep(2000);
           System.out.println("Client: Sending file bytes");
-          socket.send(p);
+          socket.send(dataPacket);
         } catch (Exception e){
           System.out.println("Error sending the fileBytes ");
         }
+        
+        
+        //receive last acknowledgement
         if(loop==false){
           byte[] ackBytes2 = new byte[516];
           DatagramPacket ackPacket2 = new DatagramPacket(ackBytes2, 516);
@@ -327,6 +383,7 @@ public class Client extends Thread{
 //Check the size of the file
   private boolean checkSize(byte[] received){
     for(int i =4;i<516;i++){
+      //System.out.print(received[i]+" ");
       if(received[i]==0) return false;
     }
     return true;
@@ -379,31 +436,42 @@ public class Client extends Thread{
     System.out.println(Arrays.toString(received));//print as a binary
     
   }
-  
+  //function 
   public void run(){
-    //while(true){
-    System.out.println("Hi, what type of request would you like to send: (read), (write) or (shutdown)");
-    String answer = scanner.nextLine().toLowerCase();
-
-    if(answer.equals("read")){
-      System.out.println("What is the name of the file");
-      //answer = "test.txt";
-      answer = scanner.nextLine().toLowerCase();
+    while(true){
+      System.out.println("Hi, what type of request would you like to send: (read), (write) or would you like to (shutdown)");
+      String answer = scanner.nextLine().toLowerCase();
       
-      read(answer);
-    } else if(answer.equals("write")){
-      System.out.println("What is the name of the file");
-      answer = scanner.nextLine().toLowerCase();
-      
-      write(answer);
-      
-    } else if (answer.equals("shutdown")){
-      System.out.println("Shuting down...");
-      //break;
-    } else {
-      System.out.println("Invalid request");
+      if(answer.equals("read")){
+        System.out.println("What is the name of the file");
+        answer = scanner.nextLine().toLowerCase();
+        System.out.println("Would you like to enter a pathname to that file: (yes or no)");
+        String answer2 = scanner.nextLine().toLowerCase();
+        
+        if(answer2.equals("yes")){
+          System.out.println("Please enter the pathname to the file");
+          this.path = scanner.nextLine();
+        }
+        read(answer);
+      } else if(answer.equals("write")){
+        System.out.println("What is the name of the file");
+        answer = scanner.nextLine().toLowerCase();
+        System.out.println("Would you like to enter a pathname: (yes or no)");
+        String answer2 = scanner.nextLine().toLowerCase();
+        
+        if(answer2.equals("yes")){
+          System.out.println("Please enter the path name");
+          this.path = scanner.nextLine();
+        }
+        write(answer);
+        
+      } else if (answer.equals("shutdown")){
+        System.out.println("Shuting down...");
+        break;
+      } else {
+        System.out.println("Invalid request");
+      }
     }
-    //}
     try{
       System.out.println("Sockets closing, good bye");
       socket.close();
