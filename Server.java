@@ -130,7 +130,8 @@ public class Server extends Thread{
     } catch (Exception e){
       System.out.println("Error in socket1 init");
     }
-    
+    System.out.println("Server: printint...");
+    print(packet.getData());
     String filename = getFileName(packet.getData());
     
     //System.out.println("Filename: "+filename);
@@ -192,7 +193,7 @@ public class Server extends Thread{
       
       //send the data
       System.out.println("Server: Sending fileBytes");
-      //print(dataBytes);
+      print(dataBytes);
       DatagramPacket packet2= new DatagramPacket(dataBytes,516,address, packet.getPort());//-------
       lastPacket = packet2;
       
