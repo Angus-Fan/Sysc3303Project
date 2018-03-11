@@ -69,7 +69,7 @@ public class Client extends Thread{
     
     String str = new String(readRequestBytes);
     System.out.println(str);
-    // print(str);
+    print(str);
     
     
     //Create the readRequest datagramPacket
@@ -116,6 +116,7 @@ public class Client extends Thread{
       try{
         System.out.println("Client: waiting for Data packet");
         socket.receive(dataPacket);
+        //print(dataPacket.getData());//--------------------------------------------------------
         
         System.out.println("Client: Data packet received");
       } catch(IOException e){
@@ -130,10 +131,14 @@ public class Client extends Thread{
       
       if(dataPacket2[2]<blockNum1){
         System.out.println("Client: duplicate Data block received and, ignored");
-        continue;
+        return;
+        //
+        //continue;
       } else if(dataPacket2[2]==blockNum1 && dataPacket2[3]<blockNum2){
         System.out.println("Client: duplicate Data block received, and ignored");
-        continue;
+        return;
+        //
+        //continue;
       }
       
       //----------------------------------------------------------------------------
@@ -144,19 +149,18 @@ public class Client extends Thread{
         //send the last acknowledgement
         loop = false;
         System.out.println("Final set of blocks sent");
-        /*
-         try{
-         fileInputStream.close();
-         } catch (Exception e){
-         System.out.println("Error closing file input stream");
-         }*/
       }
       
       //--
-      byte[] dataBytes2 = dataPacket.getData();
+      byte[] dataBytes2 = dataPacket.getData();//
       //write to file
       try{
-        //fo.write(dataBytes2,4, 514);
+        if(loop==true){
+          //fo.write(dataBytes2,4, 514);
+        } else if(loop=false){
+          //int n = checkSizeAndReturn(dataBytes2);
+          //fo.write(dataBytes2,4,n-1);
+        }
       } catch (Exception e){
         System.out.println("Error writing to file");
       }
@@ -177,6 +181,12 @@ public class Client extends Thread{
       } catch(Exception e){
         System.out.println("Error in sending acknowledgement");
       }
+    }
+    
+    try{
+      fo.close();
+    } catch (Exception e){
+      System.out.println("Error closing fileoutputStream");
     }
     
   }
@@ -387,6 +397,13 @@ public class Client extends Thread{
       if(received[i]==0) return false;
     }
     return true;
+  }
+  //check the size and return an int (index of last byte)
+  private int checkSizeAndReturn(byte[] received){
+    for(int i = 0;i<514;i++){
+      if(received[i]==0) return i;
+    }
+    return -1;
   }
 //verify the response received from the user and handle it acorrdingly
   byte[] handleACK(byte[] response){
