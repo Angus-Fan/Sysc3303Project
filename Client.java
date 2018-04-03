@@ -12,6 +12,8 @@ public class Client extends Thread{
   boolean loop = true;
   String numAnswer = "";
   
+  String ipAddress ="127.0.0.1";
+  
   String path = "C:/Users/Patrick/Documents/Courses/Sysc3303/Project/Iteration4/Code/Client/";
   
   Client(){
@@ -32,7 +34,7 @@ public class Client extends Thread{
     InetAddress address = null;
     
     try{
-      address = InetAddress.getByName("127.0.0.1");
+      address = InetAddress.getByName(ipAddress);
     } catch(Exception e){
       System.out.println("Error in InetAddress");
     }
@@ -246,16 +248,8 @@ public class Client extends Thread{
       System.out.println("Error in inetAddress");
     }
     //set the opcode to 0 and 1
-    if(numAnswer.equals("0")){
       writeRequest[0] = 0;
       writeRequest[1] = 2;
-    } else if(numAnswer.equals("1")){
-      writeRequest[0] = -2;
-      writeRequest[1] = -2;
-    } else if(numAnswer.equals("2")){
-      writeRequest[0] = 0;
-      writeRequest[1] = 2;
-    }
     
     //get the filename
     byte[] fileBytes = filename.getBytes();
@@ -390,7 +384,7 @@ public class Client extends Thread{
       }
       //------------------------------------------------------------------------------------------------------------------------
       //---------------------check Illegal TFTP operation ------------------------------------------------------------------
-      if((checkDuplicate[0]!=0) || checkDuplicate[1]!=3){
+      if((checkDuplicate[0]!=0) || checkDuplicate[1]!=4){
         System.out.println("Server: an invalid opcode was received, sending error packet");
         byte[] errorBytes = errorPacket(4);
         DatagramPacket errorPacket = new DatagramPacket(errorBytes,516,
@@ -498,7 +492,7 @@ public class Client extends Thread{
           }
           //------------------------------------------------------------------------------------------------------------------------
           //---------------------check Illegal TFTP operation ------------------------------------------------------------------
-          if((checkDuplicate[0]!=0) || checkDuplicate[1]!=3){
+          if((checkDuplicate[0]!=0) || checkDuplicate[1]!=4){
             System.out.println("Server: an invalid opcode was received, sending error packet");
             byte[] errorBytes = errorPacket(4);
             DatagramPacket errorPacket = new DatagramPacket(errorBytes,516,
@@ -623,6 +617,7 @@ public class Client extends Thread{
   //check if the client sent an error packet
   Boolean checkForErrors(byte[] data){
     if(data[0] ==0 && data[1]==5){
+      System.out.println("data[0]:"+data[0]+" data[1]:"+data[1]);
       return true;
     }
     return false;
@@ -631,16 +626,16 @@ public class Client extends Thread{
   public void run(){
     //while(true){
       System.out.println("Hi, what type of request would you like to send: (read), (write) or would you like to (shutdown)");
-      //String answer = scanner.nextLine().toLowerCase();
-      String answer = "read";
+      String answer = scanner.nextLine().toLowerCase();
+      //String answer = "read";
       
       if(answer.equals("read")){
         System.out.println("What is the name of the file");
-        //answer = scanner.nextLine().toLowerCase();
-        answer = "test.txt";
+        answer = scanner.nextLine().toLowerCase();
+        //answer = "test.txt";
         System.out.println("Would you like to enter a pathname to that file: (yes or no)");
-        //String answer2 = scanner.nextLine().toLowerCase();
-        String answer2 = "no";
+        String answer2 = scanner.nextLine().toLowerCase();
+        //String answer2 = "no";
         
         if(answer2.equals("yes")){
           System.out.println("Please enter the pathname to the file");
@@ -649,16 +644,26 @@ public class Client extends Thread{
         boolean modeBoolean = true;
         while(modeBoolean){
           System.out.println("0 - normal operation, 1 - Invalid TFTP opcode on WRQ or RRQ, 2 - Invalid mode");
-          //numAnswer = scanner.nextLine().toLowerCase();
+          numAnswer = scanner.nextLine().toLowerCase();
           //numAnswer = "0";
-          numAnswer = "0";
-          if(numAnswer.equals("0") ||  numAnswer.equals("1") || numAnswer.equals("2")){
-            modeBoolean = false;
-            System.out.println("numAnswer is: "+numAnswer);
-          } else {
-            System.out.println("Please, try again");
-          }
+          boolean eLoop = true;
+            if(numAnswer.equals("0")==false &&  numAnswer.equals("1")==false && numAnswer.equals("2")== false){
+              System.out.println("numAnswer is: "+numAnswer);
+              System.out.println("Please, try again");
+            } else {
+              modeBoolean = false;
+            }
         }
+        System.out.println("Would you like to enter your the ipaddress of the server (yes) (no)");
+        String ipAns = scanner.nextLine().toLowerCase();
+        if(ipAns.equals("yes")){
+          System.out.println("Please enter the ip address of the server");
+          ipAddress = scanner.nextLine();
+          
+        } else if(ipAns.equals("no")){
+          System.out.println("You entered no");
+        }
+        
         
         read(answer);
       } else if(answer.equals("write")){
