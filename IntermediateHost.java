@@ -51,8 +51,7 @@ public class ErrorSimulator extends Thread{
     if(name.equals("main errorSimulator")){
       System.out.println("What would you like to do:");
       System.out.println("0 - normal operation, 1 - Invalid TFTP opcode on WRQ or RRQ, 2 - Invalid mode");
-      //numAnswer = scanner.nextLine().toLowerCase();
-      numAnswer = "2";
+      numAnswer = scanner.nextLine().toLowerCase();
       System.out.println(numAnswer);
       
       if(numAnswer.equals("0")){
@@ -162,7 +161,7 @@ public class ErrorSimulator extends Thread{
         } catch(Exception e){
           System.out.println("Error in Thread.sleep/sending packet");
         }
-        
+        /*
         System.out.println(eLoop);
         eLoop = checkSize(message.getData());
         if(eLoop==false){
@@ -175,6 +174,7 @@ public class ErrorSimulator extends Thread{
           System.out.println("not main ErrorSimulator: an errorPacket was sent");
           break;
         }
+        */
         
         //receive from client
         System.out.println("errorSimulator: waiting for packet from client");
@@ -197,7 +197,7 @@ public class ErrorSimulator extends Thread{
         eLoop = checkOpCode(packetFromClient.getData());
         System.out.println("errorSimulator: sending packet to server");
         DatagramPacket sendPacketToServer = new DatagramPacket(packetFromClient.getData(), packetFromClient.getLength(),
-                                                               receivedFromServer.getAddress(), receivedFromServer.getPort());
+                                                               receivedFromServer.getAddress(), serverPort);
         
         
         str = new String (packetFromClient.getData());
@@ -207,6 +207,7 @@ public class ErrorSimulator extends Thread{
         } catch(Exception e){
           System.out.println("Error sending to server");
         }
+        /*
         //---------------------
         eLoop = checkSize(message.getData());
         if(eLoop == false){
@@ -219,8 +220,7 @@ public class ErrorSimulator extends Thread{
           break;
         }
         //-----------------------------
-        
-        
+        */
         System.out.println("===================================================================");
       }
     }
@@ -243,8 +243,6 @@ public class ErrorSimulator extends Thread{
     ErrorSimulator e = new ErrorSimulator(message);
     errorSimulators.add(e);
     e.start();
-    
-    
   }
   
   //shutdown the sockets
@@ -266,7 +264,6 @@ public class ErrorSimulator extends Thread{
         }
       }
     }
-    
   }
   
   
@@ -288,7 +285,6 @@ public class ErrorSimulator extends Thread{
     for(int i =4;i<512;i++){
       
       if(data[i]==0){
-        System.out.println(i+" "+data[i]);
         return false;
         
       }
